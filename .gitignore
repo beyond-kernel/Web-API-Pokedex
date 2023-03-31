@@ -1,0 +1,8 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/pokedex_api_V2/obj
+/pokedex_api_V2/bin/Debug
+/pokedex_api_V2/.vs
+/pokedex_api_V2/pokedex_api_V2/bin/Debug/net6.0
