@@ -48,6 +48,8 @@ app.UseHttpsRedirection();
 
 app.UseHsts();
 
+PokemonSeed.PopulatePokemonCenter();
+
 app.UseAuthorization();
 
 app.MapControllers();
