@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using System;
 
 namespace pokedex_api_V2.Controllers
 {
@@ -36,26 +37,8 @@ namespace pokedex_api_V2.Controllers
             }
         }
 
-        [HttpPost]
-        public List<Pokemon> GetPokemonByName([FromBody] string name)
-        {
-
-            try
-            {
-                var database = _dbConnnect.Connect();
-
-                var pokemonCollection = database.GetCollection<Pokemon>("pokemon").AsQueryable().ToList();
-
-                return pokemonCollection.FindAll(p => p.Name.Contains(name));
-            }
-            catch (System.Exception e)
-            {
-                throw new Exception(e.Message);
-            }
-        }
-
-        [HttpPost]
-        public List<Pokemon> GetPokemonByTypes([FromBody] string[] types)
+        [HttpGet]
+        public List<Pokemon> GetPokemonByTypes([FromHeader] string[] types)
         {
             try
             {
@@ -69,13 +52,37 @@ namespace pokedex_api_V2.Controllers
                 }
                 var database = _dbConnnect.Connect();
                 var pokemonCollection = database.GetCollection<Pokemon>("pokemon").AsQueryable().ToList();
-                var pokemons = (from pokemon in pokemonCollection
-                                where
-                                pokemon.Types.Contains(types[0])
-                                &&
-                                pokemon.Types.Contains(types.Count() > 1 ? types[1] : types[0])
-                                select pokemon).ToList();
+
+                var pokemons = pokemonCollection.Where(p =>
+                                 p.Types.Any(t => t.Equals(types[0], StringComparison.OrdinalIgnoreCase)) &&
+                                 p.Types.Any(t => t.Equals(types.Count() > 1 ? types[1] : types[0], StringComparison.OrdinalIgnoreCase)))
+                              .ToList();
+
                 return pokemons;
+            }
+            catch (System.Exception e)
+            {
+                throw new Exception(e.Message);
+            }
+        }
+
+        [HttpGet]
+        public Pokemon GetPokemonByName([FromHeader] string name)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(name))
+                {
+                    throw new Exception("Informar nome do Pokémon");
+                }
+                var database = _dbConnnect.Connect();
+                var pokemonCollection = database.GetCollection<Pokemon>("pokemon").AsQueryable().ToList();
+                var pokemonSelected = (from pokemon in pokemonCollection
+                                       where
+                                       pokemon.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+                                       select pokemon).FirstOrDefault();
+
+                return pokemonSelected;
             }
             catch (System.Exception e)
             {
