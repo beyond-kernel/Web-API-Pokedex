@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using MongoDB.Bson;
+using System.Text.RegularExpressions;
 using System;
 
 namespace pokedex_api_V2.Controllers
@@ -51,12 +53,21 @@ namespace pokedex_api_V2.Controllers
                     throw new Exception("Pokemons só podem ter máximo 2 tipos");
                 }
                 var database = _dbConnnect.Connect();
-                var pokemonCollection = database.GetCollection<Pokemon>("pokemon").AsQueryable().ToList();
+                var pokemonCollection = database.GetCollection<Pokemon>("pokemon");
 
-                var pokemons = pokemonCollection.Where(p =>
-                                 p.Types.Any(t => t.Equals(types[0], StringComparison.OrdinalIgnoreCase)) &&
-                                 p.Types.Any(t => t.Equals(types.Count() > 1 ? types[1] : types[0], StringComparison.OrdinalIgnoreCase)))
-                              .ToList();
+                var regex1 = new BsonRegularExpression($"^{Regex.Escape(types[0])}$", "i");
+                var filter1 = Builders<Pokemon>.Filter.Regex("Types", regex1);
+
+                FilterDefinition<Pokemon> combinedFilter = filter1;
+
+                if (types.Count() > 1 && !string.IsNullOrEmpty(types[1]))
+                {
+                    var regex2 = new BsonRegularExpression($"^{Regex.Escape(types[1])}$", "i");
+                    var filter2 = Builders<Pokemon>.Filter.Regex("Types", regex2);
+                    combinedFilter = Builders<Pokemon>.Filter.And(filter1, filter2);
+                }
+
+                var pokemons = pokemonCollection.Find(combinedFilter).ToList();
 
                 return pokemons;
             }
@@ -76,11 +87,10 @@ namespace pokedex_api_V2.Controllers
                     throw new Exception("Informar nome do Pokémon");
                 }
                 var database = _dbConnnect.Connect();
-                var pokemonCollection = database.GetCollection<Pokemon>("pokemon").AsQueryable().ToList();
-                var pokemonSelected = (from pokemon in pokemonCollection
-                                       where
-                                       pokemon.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
-                                       select pokemon).FirstOrDefault();
+                var pokemonCollection = database.GetCollection<Pokemon>("pokemon");
+
+                var filter = Builders<Pokemon>.Filter.Regex(p => p.Name, new BsonRegularExpression($"^{Regex.Escape(name)}$", "i"));
+                var pokemonSelected = pokemonCollection.Find(filter).FirstOrDefault();
 
                 return pokemonSelected;
             }
